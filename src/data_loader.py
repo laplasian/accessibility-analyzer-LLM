@@ -1,77 +1,87 @@
 import json
 import os
 import numpy as np
-import sys
+from feature_extractor.text_feature_extractor import extract_text_features
+from feature_extractor.numeric_feature_extractor import extract_numeric_features
+from feature_extractor.color_feature_extractor import extract_color_features
+from feature_extractor.categorical_feature_extractor import extract_categorical_features
+from config import FEATURE_MAPPING
 
-# --- НАСТРОЙКА ПУТЕЙ ---
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if PROJECT_ROOT not in sys.path:
-    sys.path.append(PROJECT_ROOT)
-# --- КОНЕЦ НАСТРОЙКИ ПУТЕЙ ---
-
-from src.text_feature_extractor import extract_text_features
 
 def load_dataset(dataset_dir=None, labels_file='labels.json'):
-    """
-    Загружает датасет: извлекает признаки для каждого JSON-файла и сопоставляет их с оценками.
-    """
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if dataset_dir is None:
-        # Путь к папке dataset теперь строится от PROJECT_ROOT
         dataset_dir = os.path.join(PROJECT_ROOT, 'dataset')
 
     labels_path = os.path.join(dataset_dir, labels_file)
-    
-    print(f"Загрузка меток из файла: {labels_path}")
+
     try:
         with open(labels_path, 'r', encoding='utf-8') as f:
             labels = json.load(f)
     except FileNotFoundError:
-        print(f"ОШИБКА: Файл с метками не найден: {labels_path}")
         return [], np.array([])
 
-    X = []
-    y = []
+    X_list = []
+    y_list = []
 
-    print("Обработка файлов данных...")
     for filename, score in labels.items():
         file_path = os.path.join(dataset_dir, filename)
-        
+
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 dom_data = json.load(f)
-            
+
             text_vectors = extract_text_features(dom_data)
-            
-            if text_vectors.shape[0] > 0:
-                X.append(text_vectors)
-                y.append(score)
-                print(f"  - Файл '{filename}' обработан. Найдено {text_vectors.shape[0]} элементов.")
-            else:
-                print(f"  - ПРЕДУПРЕЖДЕНИЕ: В файле '{filename}' не найдено элементов. Пропускается.")
+
+            if text_vectors.shape[0] == 0:
+                continue
+
+            num_elements = text_vectors.shape[0]
+
+            color_vectors, contrast_vectors = extract_color_features(dom_data)
+
+            numeric_vectors = extract_numeric_features(dom_data, normalize=False)
+
+            if contrast_vectors.shape[0] == numeric_vectors.shape[0]:
+                numeric_vectors = np.concatenate([numeric_vectors, contrast_vectors], axis=1)
+
+            categorical_dict = extract_categorical_features(dom_data)
+
+            all_shapes_match = True
+            if not (text_vectors.shape[0] == numeric_vectors.shape[0] == color_vectors.shape[0]):
+                all_shapes_match = False
+            for cat_name, cat_array in categorical_dict.items():
+                if cat_array.shape[0] != num_elements:
+                    all_shapes_match = False
+
+            if not all_shapes_match:
+                continue
+
+            model_input_dict = {
+                "text_input": text_vectors,
+                "numeric_input": numeric_vectors,
+                "color_input": color_vectors
+            }
+            for cat_name, cat_array in categorical_dict.items():
+                model_input_dict[f"{cat_name}_input"] = cat_array
+
+            X_list.append(model_input_dict)
+            y_list.append(score)
 
         except FileNotFoundError:
-            print(f"  - ПРЕДУПРЕЖДЕНИЕ: Файл данных '{filename}' не найден. Пропускается.")
+            continue
         except Exception as e:
-            print(f"  - ОШИБКА при обработке файла '{filename}': {e}. Пропускается.")
+            continue
 
-    if not X:
-        print("Не удалось загрузить ни одного примера данных.")
+    if not X_list:
         return [], np.array([])
 
-    return X, np.array(y)
+    return X_list, np.array(y_list, dtype=np.float32)
+
 
 if __name__ == '__main__':
-    from src.text_feature_extractor import setup_model_cache
+    from feature_extractor.text_feature_extractor import setup_model_cache
 
-    print("--- Демонстрация загрузчика данных ---")
     setup_model_cache()
-    
-    features, scores = load_dataset()
-    
-    if features:
-        print("\n--- Результат загрузки ---")
-        print(f"Загружено {len(features)} примеров.")
-        print(f"Оценки (y): {scores}")
-        print("Признаковые матрицы (X):")
-        for i, matrix in enumerate(features):
-            print(f"  - Пример {i+1}: форма матрицы {matrix.shape}")
+
+    X_data, y_data = load_dataset()

@@ -1,57 +1,72 @@
-import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-import numpy as np
 import os
+from input_layers import create_model_inputs
+from embedding_layers import create_embeddings
+from transformer_block import create_transformer_block
+from config import FEATURE_MAPPING
 
-def create_text_head_model(input_shape=(None, 512), num_heads=8, ff_dim=512, num_transformer_blocks=1):
-    """
-    Создает модель "головы" для обработки текстовых признаков.
-    """
-    inputs = layers.Input(shape=input_shape, name="text_input")
+TEXT_VECTOR_SIZE = 512
+NUMERIC_VECTOR_SIZE = len(FEATURE_MAPPING["numeric_scalar"]) + 1
+COLOR_VECTOR_SIZE = len(FEATURE_MAPPING["color"]) * 3
 
-    x = inputs
-    for _ in range(num_transformer_blocks):
-        attention_output = layers.MultiHeadAttention(num_heads=num_heads, key_dim=input_shape[-1] // num_heads)(x, x)
-        x = layers.Add()([x, attention_output])
-        x = layers.LayerNormalization(epsilon=1e-6)(x)
-        
-        ffn = keras.Sequential(
-            [layers.Dense(ff_dim, activation="relu"), layers.Dense(input_shape[-1])]
-        )
-        ffn_output = ffn(x)
-        x = layers.Add()([x, ffn_output])
-        x = layers.LayerNormalization(epsilon=1e-6)(x)
 
-    x = layers.GlobalAveragePooling1D(name="page_vector")(x)
+def create_usability_model(transformer_num_heads=8, transformer_key_dim=64, transformer_ffn_dim=128):
+    all_inputs = create_model_inputs(
+        text_vector_size=TEXT_VECTOR_SIZE,
+        numeric_vector_size=NUMERIC_VECTOR_SIZE,
+        color_vector_size=COLOR_VECTOR_SIZE
+    )
 
-    x = layers.Dropout(0.2)(x)
-    x = layers.Dense(128, activation="relu", name="dense_1")(x)
-    x = layers.Dropout(0.2)(x)
-    x = layers.Dense(64, activation="relu", name="dense_2")(x)
-    
-    outputs = layers.Dense(1, activation="linear", name="usability_score")(x)
+    categorical_inputs = {k: v for k, v in all_inputs.items() if k not in ["text", "numeric", "color"]}
+    embedding_vectors = create_embeddings(categorical_inputs)
 
-    model = keras.Model(inputs=inputs, outputs=outputs, name="text_head_model")
-    
+    element_feature_tensors = [
+                                  all_inputs["text"],
+                                  all_inputs["numeric"],
+                                  all_inputs["color"]
+                              ] + embedding_vectors
+
+    mega_vector = layers.Concatenate(axis=-1, name="mega_vector_concat")(element_feature_tensors)
+
+    masked_vector = layers.Masking(mask_value=0.0)(mega_vector)
+
+    transformer_output = create_transformer_block(
+        inputs=masked_vector,
+        num_heads=transformer_num_heads,
+        key_dim=transformer_key_dim,
+        ffn_dim=transformer_ffn_dim
+    )
+
+    page_vector = layers.GlobalAveragePooling1D(name="page_vector")(transformer_output)
+
+    x = layers.Dense(64, activation='relu')(page_vector)
+    x = layers.Dropout(0.3)(x)
+
+    output_score = layers.Dense(1, activation='linear', name='usability_score')(x)
+
+    model = keras.Model(
+        inputs=list(all_inputs.values()),
+        outputs=output_score,
+        name="UI_UX_Evaluator"
+    )
+
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=1e-4),
         loss="mean_squared_error",
         metrics=["mean_absolute_error"]
     )
-    
+
     return model
 
-if __name__ == '__main__':
-    text_model = create_text_head_model()
-    
-    print("Архитектура модели для текстовых признаков:")
-    text_model.summary()
-    
-    dummy_page_vectors = np.random.rand(1, 25, 512) 
-    
-    print(f"\nПример входных данных: 1 страница, {dummy_page_vectors.shape[1]} элементов, {dummy_page_vectors.shape[2]} признаков в каждом.")
-    
-    predicted_score = text_model.predict(dummy_page_vectors)
-    
-    print(f"\nПример предсказания (оценка юзабилити): {predicted_score[0][0]:.2f}")
+
+if __name__ == "__main__":
+    model = create_usability_model()
+    model.summary()
+
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        model_plot_path = os.path.join(PROJECT_ROOT, 'model_architecture.png')
+        keras.utils.plot_model(model, to_file=model_plot_path, show_shapes=True, expand_nested=True)
+    except Exception as e:
+        pass
