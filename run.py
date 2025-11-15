@@ -2,7 +2,6 @@ import json
 import numpy as np
 import os
 import sys
-import tensorflow as tf
 
 # --- НАСТРОЙКА ПУТЕЙ ---
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -12,30 +11,6 @@ if PROJECT_ROOT not in sys.path:
 
 from src.text_feature_extractor import extract_text_features, setup_model_cache
 from src.models import create_text_head_model
-
-def check_gpu():
-    """Проверяет доступность GPU для TensorFlow."""
-    print("--- Диагностика GPU ---")
-    gpus = tf.config.list_physical_devices('GPU')
-    if gpus:
-        try:
-            # Попробуем выделить память на GPU, чтобы убедиться, что он работает
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            print(f"✅ Найдено {len(gpus)} GPU. TensorFlow будет использовать видеокарту.")
-            for i, gpu in enumerate(gpus):
-                print(f"  - GPU {i}: {gpu.name}")
-        except RuntimeError as e:
-            print(f"❌ Ошибка при инициализации GPU: {e}")
-            print("  - Убедитесь, что драйверы NVIDIA, CUDA и cuDNN установлены и совместимы с вашей версией TensorFlow.")
-    else:
-        print("❌ GPU не найден. TensorFlow будет использовать CPU.")
-        print("  - Возможные причины:")
-        print("    1. Не установлены или несовместимы драйверы NVIDIA.")
-        print("    2. Не установлены или несовместимы CUDA Toolkit и cuDNN.")
-        print("    3. Ваша версия TensorFlow не поддерживает GPU (например, 'tensorflow' вместо 'tensorflow-gpu').")
-    print("-----------------------\n")
-
 
 def main():
     """
@@ -87,6 +62,4 @@ def main():
         print(f"Произошла непредвиденная ошибка: {e}")
 
 if __name__ == '__main__':
-    # Сначала проверяем наличие GPU
-    check_gpu()
     main()

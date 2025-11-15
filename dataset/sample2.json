@@ -3,16 +3,48 @@
     {
       "tag": "h1",
       "text": "Добро пожаловать на наш сайт",
-      "alt": "",
-      "title": "",
-      "placeholder": ""
+      "alt": null,
+      "title": "Главный заголовок",
+      "placeholder": null,
+      "width": "800px",
+      "height": "50px",
+      "top": "30px",
+      "left": "40px",
+      "fontSize": "36px",
+      "fontWeight": "700",
+      "lineHeight": "1.2",
+      "opacity": "1",
+      "letterSpacing": "-0.5px",
+      "color": "rgb(10, 20, 30)",
+      "backgroundColor": "rgb(248, 249, 250)",
+      "position": "relative",
+      "display": "block",
+      "textAlign": "center",
+      "depth": 1,
+      "num_children": 0
     },
     {
       "tag": "a",
       "text": "Узнать больше",
       "title": "Перейти на страницу 'О нас'",
-      "alt": "",
-      "placeholder": ""
+      "alt": null,
+      "placeholder": null,
+      "width": "150px",
+      "height": "45px",
+      "top": "100px",
+      "left": "auto",
+      "fontSize": "18px",
+      "fontWeight": "500",
+      "lineHeight": "45px",
+      "opacity": "1",
+      "letterSpacing": "normal",
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgb(0, 123, 255)",
+      "position": "static",
+      "display": "inline-block",
+      "textAlign": "center",
+      "depth": 2,
+      "num_children": 0
     }
   ]
 }
