@@ -20,27 +20,6 @@
       "alt": "",
       "title": "Поле для ввода имени пользователя",
       "placeholder": "Введите ваше имя"
-    },
-    {
-      "tag": "a",
-      "text": "Нажмите здесь",
-      "title": "Ссылка на главную страницу",
-      "alt": "",
-      "placeholder": ""
-    },
-    {
-      "tag": "div",
-      "text": "Текст внутри блока div.",
-      "alt": null,
-      "title": null,
-      "placeholder": null
-    },
-    {
-      "tag": "span",
-      "text": "",
-      "alt": "",
-      "title": "",
-      "placeholder": ""
     }
   ]
 }
