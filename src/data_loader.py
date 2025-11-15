@@ -1,21 +1,24 @@
 import json
 import os
 import numpy as np
-from text_feature_extractor import extract_text_features
+import sys
 
-def load_dataset(dataset_dir='dataset', labels_file='labels.json'):
+# --- НАСТРОЙКА ПУТЕЙ ---
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.append(PROJECT_ROOT)
+# --- КОНЕЦ НАСТРОЙКИ ПУТЕЙ ---
+
+from src.text_feature_extractor import extract_text_features
+
+def load_dataset(dataset_dir=None, labels_file='labels.json'):
     """
     Загружает датасет: извлекает признаки для каждого JSON-файла и сопоставляет их с оценками.
-
-    Args:
-        dataset_dir (str): Путь к папке с данными.
-        labels_file (str): Имя файла с метками.
-
-    Returns:
-        tuple: Кортеж (X, y), где:
-               - X (list): список матриц признаков (каждая матрица для одного JSON).
-               - y (np.ndarray): массив оценок.
     """
+    if dataset_dir is None:
+        # Путь к папке dataset теперь строится от PROJECT_ROOT
+        dataset_dir = os.path.join(PROJECT_ROOT, 'dataset')
+
     labels_path = os.path.join(dataset_dir, labels_file)
     
     print(f"Загрузка меток из файла: {labels_path}")
@@ -26,8 +29,8 @@ def load_dataset(dataset_dir='dataset', labels_file='labels.json'):
         print(f"ОШИБКА: Файл с метками не найден: {labels_path}")
         return [], np.array([])
 
-    X = []  # Список для хранения матриц признаков
-    y = []  # Список для хранения оценок
+    X = []
+    y = []
 
     print("Обработка файлов данных...")
     for filename, score in labels.items():
@@ -37,7 +40,6 @@ def load_dataset(dataset_dir='dataset', labels_file='labels.json'):
             with open(file_path, 'r', encoding='utf-8') as f:
                 dom_data = json.load(f)
             
-            # Извлекаем текстовые признаки для текущего файла
             text_vectors = extract_text_features(dom_data)
             
             if text_vectors.shape[0] > 0:
@@ -59,14 +61,11 @@ def load_dataset(dataset_dir='dataset', labels_file='labels.json'):
     return X, np.array(y)
 
 if __name__ == '__main__':
-    # Пример использования
-    from text_feature_extractor import setup_model_cache
+    from src.text_feature_extractor import setup_model_cache
 
     print("--- Демонстрация загрузчика данных ---")
-    # Настраиваем кэш перед использованием extract_text_features
     setup_model_cache()
     
-    # Загружаем датасет
     features, scores = load_dataset()
     
     if features:

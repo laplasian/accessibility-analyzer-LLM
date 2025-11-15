@@ -1,7 +1,7 @@
 ```bash
  conda init
  conda env create -f env.yml
- conda activate phase-predictor-cloud-env
+ conda activate env
  
 ```
 
