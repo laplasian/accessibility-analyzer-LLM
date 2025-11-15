@@ -1,5 +1,5 @@
 import numpy as np
-from tensorflow import keras
+import keras
 
 # Импортируем наши модули
 from data_loader import load_dataset

@@ -1,6 +1,6 @@
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+import keras
+from keras import layers
 import numpy as np
 
 def create_text_head_model(input_shape=(None, 512), num_heads=8, ff_dim=512, num_transformer_blocks=1):
